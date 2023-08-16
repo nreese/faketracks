@@ -130,7 +130,7 @@ async function recreateIndex() {
                 mappings: {
                     properties: {
                         location: {
-                            type: 'geo_point',
+                            type: 'geo_shape',
                             ...(isTimeSeries 
                               ? { time_series_metric: 'position' } 
                               : {
@@ -272,10 +272,22 @@ async function generateWaypoints() {
         const azimuth = azimuthInDegrees(from[0], from[1], to[0], to[1]);
         const timeJiggerIsoString = (new Date((Date.now() - timeJigger * Math.random()))).toISOString();
 
+        const topLat = wayPointES[1] + 0.001;
+        const bottomLat = wayPointES[1] - 0.001;
+        const leftLon = wayPointES[0] - 0.001;
+        const rightLon = wayPointES[0] + 0.001;
+
         const doc = {
             // azimuth: azimuth,
             azimuth: (azimuth * -1) + 90, // hack to use 2D semantics (probable bug in maps https://github.com/elastic/kibana/issues/77496)
-            location: wayPointES,
+            location: {
+              "type" : "polygon",
+              "coordinates" : [
+                [
+                  [leftLon, topLat], [rightLon, topLat], [rightLon, bottomLat], [leftLon, bottomLat], [leftLon, topLat]
+                ]
+              ]
+            },
             entity_id: trackId.toString(), // timeseries requires strings
             speed: speedInUnitsPerHour,
             "@timestamp": timeStamp.toISOString(),
